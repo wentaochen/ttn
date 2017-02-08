@@ -9,6 +9,7 @@ go:
     - 1.7
 
 install:
+    - make dev-deps
     - make deps
     - make cover-deps
 
@@ -18,8 +19,7 @@ before_script:
 
 script:
     - make test
-    - make fmt
-    - make vet
+    - make go.fmt go.vet go.lint-all
 
 after_success:
     - make coveralls

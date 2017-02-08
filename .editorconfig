@@ -18,3 +18,7 @@ trim_trailing_whitespace = false
 [Makefile]
 indent_style = tab
 indent_size = 2
+
+[*.make]
+indent_style = tab
+indent_size = 2

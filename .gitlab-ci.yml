@@ -17,6 +17,8 @@ before_script:
   - rm -rf $GOPATH
   - mkdir -p $GOPATH/.cache && ln -s $(pwd)/.govendor $GOPATH/.cache/govendor
   - mkdir -p $GOPATH/src/github.com/TheThingsNetwork && ln -s $(pwd) $GOPATH/src/github.com/TheThingsNetwork/ttn
+  - pushd $GOPATH/src/github.com/TheThingsNetwork/ttn
+  - make dev-deps
 
 tests:
   stage: test
@@ -44,12 +46,12 @@ binaries:
     - echo "commit $CI_BUILD_REF" >> release/info
     - pushd $GOPATH/src/github.com/TheThingsNetwork/ttn
     - make deps
-    - GOOS=linux GOARCH=386 make build
-    - GOOS=linux GOARCH=amd64 make build
-    - GOOS=linux GOARCH=arm make build
-    - GOOS=darwin GOARCH=amd64 make build
-    - GOOS=windows GOARCH=386 make build
-    - GOOS=windows GOARCH=amd64 make build
+    - TARGET_PLATFORM=linux-386 make build
+    - TARGET_PLATFORM=linux-amd64 make build
+    - TARGET_PLATFORM=linux-arm make build
+    - TARGET_PLATFORM=darwin-amd64 make build
+    - TARGET_PLATFORM=windows-386 make build
+    - TARGET_PLATFORM=windows-amd64 make build
     - popd
   artifacts:
     paths:
