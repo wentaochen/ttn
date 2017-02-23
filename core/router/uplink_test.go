@@ -24,6 +24,8 @@ func newReferenceGateway(t *testing.T, region string) *gateway.Gateway {
 	gtw.Status.Update(&pb_gateway.Status{
 		Region: region,
 	})
+	gtw.Schedule.Sync(0)
+	gtw.Schedule.Subscribe()
 	return gtw
 }
 

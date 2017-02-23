@@ -26,7 +26,7 @@ func NewGateway(ctx ttnlog.Interface, id string) *Gateway {
 		Monitors:    pb_monitor.NewRegistry(ctx),
 		Ctx:         ctx,
 	}
-	gtw.Schedule.(*schedule).gateway = gtw // FIXME: Issue #420
+	gtw.Schedule.gateway = gtw
 	return gtw
 }
 
@@ -35,7 +35,7 @@ type Gateway struct {
 	ID          string
 	Status      StatusStore
 	Utilization Utilization
-	Schedule    Schedule
+	Schedule    *Schedule
 	LastSeen    time.Time
 
 	mu            sync.RWMutex // Protect token and authenticated
@@ -119,7 +119,6 @@ func (g *Gateway) HandleDownlink(identifier string, downlink *pb_router.Downlink
 		ctx.WithError(err).Warn("Could not schedule downlink")
 		return err
 	}
-	ctx.Debug("Scheduled downlink")
 
 	clone := *downlink // Avoid race conditions
 	for _, monitor := range g.Monitors.GatewayClients(g.ID) {

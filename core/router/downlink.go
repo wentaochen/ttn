@@ -24,13 +24,13 @@ import (
 	"github.com/TheThingsNetwork/ttn/utils/toa"
 )
 
-func (r *router) SubscribeDownlink(gatewayID string, subscriptionID string) (<-chan *pb.DownlinkMessage, error) {
+func (r *router) SubscribeDownlink(gatewayID string) (<-chan *pb.DownlinkMessage, error) {
 	ctx := r.Ctx.WithFields(ttnlog.Fields{
 		"GatewayID": gatewayID,
 	})
 
 	gateway := r.getGateway(gatewayID)
-	if fromSchedule := gateway.Schedule.Subscribe(subscriptionID); fromSchedule != nil {
+	if fromSchedule := gateway.Schedule.Subscribe(); fromSchedule != nil {
 		toGateway := make(chan *pb.DownlinkMessage)
 		go func() {
 			ctx.Debug("Activate downlink")
@@ -46,8 +46,8 @@ func (r *router) SubscribeDownlink(gatewayID string, subscriptionID string) (<-c
 	return nil, errors.NewErrInternal(fmt.Sprintf("Already subscribed to downlink for %s", gatewayID))
 }
 
-func (r *router) UnsubscribeDownlink(gatewayID string, subscriptionID string) error {
-	r.getGateway(gatewayID).Schedule.Stop(subscriptionID)
+func (r *router) UnsubscribeDownlink(gatewayID string) error {
+	r.getGateway(gatewayID).Schedule.Stop()
 	return nil
 }
 
@@ -289,9 +289,9 @@ func computeDownlinkScores(gateway *gateway.Gateway, uplink *pb.UplinkMessage, o
 
 		scheduleScore := 0.0 // Between 0 and 30 (lower is better) will be over 100 if forbidden
 		{
-			id, conflicts := gateway.Schedule.GetOption(option.GatewayConfig.Timestamp, uint32(time/1000))
+			id, conflicts, err := gateway.Schedule.GetOption(option.GatewayConfig.Timestamp, uint32(time/1000))
 			option.Identifier = id
-			if conflicts >= 100 {
+			if err != nil || conflicts >= 100 {
 				scheduleScore += 100
 			} else {
 				scheduleScore += math.Min(float64(conflicts*10), 30) // max 30

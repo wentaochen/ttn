@@ -18,13 +18,15 @@ func TestHandleActivation(t *testing.T) {
 	a := New(t)
 
 	gtwID := "eui-0102030405060708"
+	gtw := newReferenceGateway(t, "EU_863_870")
+	gtw.Schedule.Stop()
 
 	r := &router{
 		Component: &component.Component{
 			Ctx: GetLogger(t, "TestHandleActivation"),
 		},
 		gateways: map[string]*gateway.Gateway{
-			gtwID: newReferenceGateway(t, "EU_863_870"),
+			gtwID: gtw,
 		},
 	}
 	r.InitStatus()

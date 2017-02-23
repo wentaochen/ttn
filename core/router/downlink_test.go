@@ -4,6 +4,7 @@
 package router
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -51,7 +52,9 @@ func TestHandleDownlink(t *testing.T) {
 	r.InitStatus()
 
 	gtwID := "eui-0102030405060708"
-	id, _ := r.getGateway(gtwID).Schedule.GetOption(0, 10*1000)
+	r.SubscribeDownlink(gtwID)
+
+	id, _, _ := r.getGateway(gtwID).Schedule.GetOption(0, 10*1000)
 	err := r.HandleDownlink(&pb_broker.DownlinkMessage{
 		Payload: []byte{},
 		DownlinkOption: &pb_broker.DownlinkOption{
@@ -79,13 +82,15 @@ func TestSubscribeUnsubscribeDownlink(t *testing.T) {
 	r.InitStatus()
 
 	gtwID := "eui-0102030405060708"
-	gateway.Deadline = 1 * time.Millisecond
+	gateway.DefaultGatewayBufferTime = 1 * time.Millisecond
+	gateway.DefaultGatewayRTT = 2 * time.Millisecond
+
+	ch, err := r.SubscribeDownlink(gtwID)
+	a.So(err, ShouldBeNil)
+
 	gtw := r.getGateway(gtwID)
 	gtw.Schedule.Sync(0)
-	id, _ := gtw.Schedule.GetOption(5000, 10*1000)
-
-	ch, err := r.SubscribeDownlink(gtwID, "")
-	a.So(err, ShouldBeNil)
+	id, _, _ := gtw.Schedule.GetOption(5000, 10*1000)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -112,7 +117,7 @@ func TestSubscribeUnsubscribeDownlink(t *testing.T) {
 	// Wait for the downlink to arrive
 	<-time.After(10 * time.Millisecond)
 
-	err = r.UnsubscribeDownlink(gtwID, "")
+	err = r.UnsubscribeDownlink(gtwID)
 	a.So(err, ShouldBeNil)
 
 	wg.Wait()
@@ -121,11 +126,20 @@ func TestSubscribeUnsubscribeDownlink(t *testing.T) {
 func TestUplinkBuildDownlinkOptions(t *testing.T) {
 	a := New(t)
 
-	r := &router{}
+	logger := GetLogger(t, "TestUplinkBuildDownlinkOptions")
+	r := &router{
+		Component: &component.Component{
+			Ctx:      logger,
+			Monitors: monitor.NewRegistry(logger),
+		},
+		gateways: map[string]*gateway.Gateway{},
+	}
+	r.InitStatus()
 
 	// If something is incorrect, it just returns an empty list
 	up := &pb.UplinkMessage{}
 	gtw := gateway.NewGateway(GetLogger(t, "TestUplinkBuildDownlinkOptions"), "eui-0102030405060708")
+
 	options := r.buildDownlinkOptions(up, false, gtw)
 	a.So(options, ShouldBeEmpty)
 
@@ -477,6 +491,8 @@ func TestComputeDownlinkScores(t *testing.T) {
 	testSubject.ProtocolMetadata.GetLorawan().DataRate = "SF12BW125"
 	options = r.buildDownlinkOptions(testSubject, false, newReferenceGateway(t, "EU_863_870"))
 	a.So(options[1].Score, ShouldBeGreaterThan, options[0].Score)
+
+	fmt.Println("Conflicts...")
 
 	// Scheduling Conflicts
 	testSubject1 = newReferenceUplink()
