@@ -90,7 +90,8 @@ func (s *Schedule) init() {
 	s.schedule = queue.NewSchedule()
 	s.queue = queue.NewJIT()
 	s.items = make(map[string]*scheduledItem)
-	s.downlink = make(chan *router_pb.DownlinkMessage)
+	downlink := make(chan *router_pb.DownlinkMessage)
+	s.downlink = downlink
 
 	// Send downlink to downlink channel
 	go func() {
@@ -101,12 +102,11 @@ func (s *Schedule) init() {
 			}
 			next := nextI.(*scheduledItem)
 			select {
-			case s.downlink <- next.payload:
+			case downlink <- next.payload:
 			default:
 			}
 		}
-		close(s.downlink)
-		s.downlink = nil
+		close(downlink)
 	}()
 
 	// Clean up expired items
@@ -164,7 +164,7 @@ func (s *Schedule) GetOption(timestamp uint32, length uint32) (id string, score 
 	s.Lock()
 	defer s.Unlock()
 
-	if s.schedule == nil {
+	if !s.isActive() {
 		err = ErrScheduleInactive
 		return
 	}
@@ -201,7 +201,7 @@ func (s *Schedule) Schedule(id string, downlink *router_pb.DownlinkMessage) erro
 	s.Lock()
 	defer s.Unlock()
 
-	if s.schedule == nil {
+	if !s.isActive() {
 		return ErrScheduleInactive
 	}
 
@@ -249,7 +249,7 @@ func (s *Schedule) Schedule(id string, downlink *router_pb.DownlinkMessage) erro
 func (s *Schedule) Subscribe() <-chan *router_pb.DownlinkMessage {
 	s.Lock()
 	defer s.Unlock()
-	if s.schedule == nil {
+	if !s.isActive() {
 		s.init()
 		s.subscribers++
 	}
@@ -257,10 +257,10 @@ func (s *Schedule) Subscribe() <-chan *router_pb.DownlinkMessage {
 }
 
 func (s *Schedule) Stop() {
+	s.Lock()
+	defer s.Unlock()
 	s.subscribers--
 	if s.subscribers < 1 {
-		s.Lock()
-		defer s.Unlock()
 		s.schedule.Destroy()
 	}
 }
@@ -268,5 +268,9 @@ func (s *Schedule) Stop() {
 func (s *Schedule) IsActive() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.downlink != nil
+	return s.isActive()
+}
+
+func (s *Schedule) isActive() bool {
+	return s.subscribers > 0
 }
