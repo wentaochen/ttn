@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"github.com/TheThingsNetwork/ttn/api"
+	"github.com/TheThingsNetwork/ttn/api/handler"
 	"github.com/TheThingsNetwork/ttn/core/types"
 	"github.com/TheThingsNetwork/ttn/ttnctl/util"
 	"github.com/spf13/cobra"
@@ -40,7 +41,9 @@ var devicesSimulateCmd = &cobra.Command{
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		err = manager.SimulateUplink(appID, devID, port, payload)
+		err = manager.SimulateUplink(getContext(), &handler.SimulatedUplinkMessage{
+			AppId: appID, DevId: devID, Payload: payload, Port: port,
+		})
 		if err != nil {
 			ctx.WithError(err).Error("Simulate failed")
 			return

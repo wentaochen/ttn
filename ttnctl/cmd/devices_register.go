@@ -87,7 +87,7 @@ var devicesRegisterCmd = &cobra.Command{
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		err = manager.SetDevice(device)
+		err = manager.SetDevice(getContext(), device)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not register Device")
 		}

@@ -64,7 +64,7 @@ var devicesPersonalizeCmd = &cobra.Command{
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		dev, err := manager.GetDevice(appID, devID)
+		dev, err := manager.GetDevice(getContext(), appID, devID)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not get existing device.")
 		}
@@ -77,20 +77,20 @@ var devicesPersonalizeCmd = &cobra.Command{
 		}
 		constraints = append(constraints, "abp")
 
-		devAddr, err := manager.GetDevAddr(constraints...)
+		devAddr, err := manager.GetDevAddr(getContext(), constraints)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not request device address")
 		}
 
 		var emptyAppKey types.AppKey
 		dev.GetLorawanDevice().AppKey = &emptyAppKey
-		dev.GetLorawanDevice().DevAddr = &devAddr
+		dev.GetLorawanDevice().DevAddr = devAddr
 		dev.GetLorawanDevice().NwkSKey = &nwkSKey
 		dev.GetLorawanDevice().AppSKey = &appSKey
 		dev.GetLorawanDevice().FCntUp = 0
 		dev.GetLorawanDevice().FCntDown = 0
 
-		err = manager.SetDevice(dev)
+		err = manager.SetDevice(getContext(), dev)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not update Device")
 		}

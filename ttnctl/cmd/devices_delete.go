@@ -42,7 +42,7 @@ Are you sure you want to delete device test from application test?
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		err := manager.DeleteDevice(appID, devID)
+		err := manager.DeleteDevice(getContext(), appID, devID)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not delete device.")
 		}

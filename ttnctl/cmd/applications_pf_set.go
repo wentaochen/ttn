@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/TheThingsNetwork/ttn/api/handler"
 	"github.com/TheThingsNetwork/ttn/ttnctl/util"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 )
 
 var applicationsPayloadFunctionsSetCmd = &cobra.Command{
@@ -63,7 +65,7 @@ Port: 1
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		app, err := manager.GetApplication(appID)
+		app, err := manager.GetApplication(context.Background(), appID)
 		if err != nil && strings.Contains(err.Error(), "not found") {
 			app = &handler.Application{AppId: appID}
 		} else if err != nil {
@@ -174,7 +176,7 @@ Function read from %s:
 					ctx.WithError(err).Fatal("Could not parse the port")
 				}
 
-				result, err := manager.DryUplink(payload, app, uint32(port))
+				result, err := manager.DryUplink(context.Background(), &handler.DryUplinkMessage{Payload: payload, App: app, Port: uint32(port)})
 				if err != nil {
 					ctx.WithError(err).Fatal("Could not set the payload function")
 				}
@@ -194,7 +196,12 @@ Function read from %s:
 					ctx.WithError(err).Fatal("Could not parse the port")
 				}
 
-				result, err := manager.DryDownlinkWithFields(fields, app, uint32(port))
+				marshaledFields, err := json.Marshal(fields)
+				if err != nil {
+					ctx.WithError(err).Fatal("Could not marshal the fields")
+				}
+
+				result, err := manager.DryDownlink(context.Background(), &handler.DryDownlinkMessage{Fields: string(marshaledFields), App: app, Port: uint32(port)})
 				if err != nil {
 					ctx.WithError(err).Fatal("Could not set the payload function")
 				}
@@ -204,7 +211,7 @@ Function read from %s:
 			}
 		}
 
-		err = manager.SetApplication(app)
+		err = manager.SetApplication(context.Background(), app)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not update application")
 		}

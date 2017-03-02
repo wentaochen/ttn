@@ -16,6 +16,7 @@ import (
 	"github.com/apex/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc/grpclog"
 )
 
@@ -165,4 +166,8 @@ func initConfig() {
 			fmt.Println("Error when reading config file:", err)
 		}
 	}
+}
+
+func getContext() context.Context {
+	return context.Background()
 }

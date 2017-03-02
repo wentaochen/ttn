@@ -26,7 +26,7 @@ var applicationsRegisterCmd = &cobra.Command{
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		err := manager.RegisterApplication(appID)
+		err := manager.RegisterApplication(getContext(), appID)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not register application")
 		}

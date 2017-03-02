@@ -39,7 +39,7 @@ function Decoder(bytes, port) {
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		app, err := manager.GetApplication(appID)
+		app, err := manager.GetApplication(getContext(), appID)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not get application.")
 		}

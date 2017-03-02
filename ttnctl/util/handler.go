@@ -6,15 +6,37 @@ package util
 import (
 	"github.com/TheThingsNetwork/go-account-lib/scope"
 	ttnlog "github.com/TheThingsNetwork/go-utils/log"
+	"github.com/TheThingsNetwork/ttn/api"
 	"github.com/TheThingsNetwork/ttn/api/discovery"
 	"github.com/TheThingsNetwork/ttn/api/handler"
+	"github.com/TheThingsNetwork/ttn/api/protocol/lorawan"
+	"github.com/TheThingsNetwork/ttn/core/types"
 	"github.com/TheThingsNetwork/ttn/utils/errors"
 	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
+type HandlerClient interface {
+	handler.SimplifiedApplicationManagerClient
+	GetDevAddr(ctx context.Context, constraints []string, opts ...grpc.CallOption) (*types.DevAddr, error)
+}
+
+type handlerClient struct {
+	handler.SimplifiedApplicationManagerClient
+	devAddrManagerClient lorawan.DevAddrManagerClient
+}
+
+func (c *handlerClient) GetDevAddr(ctx context.Context, constraints []string, opts ...grpc.CallOption) (*types.DevAddr, error) {
+	addr, err := c.devAddrManagerClient.GetDevAddr(ctx, &lorawan.DevAddrRequest{Usage: constraints})
+	if err != nil {
+		return nil, err
+	}
+	return addr.DevAddr, nil
+}
+
 // GetHandlerManager gets a new HandlerManager for ttnctl
-func GetHandlerManager(ctx ttnlog.Interface, appID string) (*grpc.ClientConn, *handler.ManagerClient) {
+func GetHandlerManager(ctx ttnlog.Interface, appID string) (*grpc.ClientConn, HandlerClient) {
 	ctx.WithField("Handler", viper.GetString("handler-id")).Info("Discovering Handler...")
 	dscConn, client := GetDiscovery(ctx)
 	defer dscConn.Close()
@@ -33,9 +55,11 @@ func GetHandlerManager(ctx ttnlog.Interface, appID string) (*grpc.ClientConn, *h
 	if err != nil {
 		ctx.WithError(err).Fatal("Could not connect to Handler")
 	}
-	managerClient, err := handler.NewManagerClient(hdlConn, token)
-	if err != nil {
-		ctx.WithError(err).Fatal("Could not create Handler Manager")
+
+	return hdlConn, &handlerClient{
+		SimplifiedApplicationManagerClient: handler.NewSimplifiedApplicationManagerClient(hdlConn, func(ctx context.Context) context.Context {
+			return api.ContextWithToken(ctx, token)
+		}),
+		devAddrManagerClient: lorawan.NewDevAddrManagerClient(hdlConn),
 	}
-	return hdlConn, managerClient
 }

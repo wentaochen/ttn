@@ -35,7 +35,7 @@ Are you sure you want to unregister application test?
 		conn, manager := util.GetHandlerManager(ctx, appID)
 		defer conn.Close()
 
-		err := manager.DeleteApplication(appID)
+		err := manager.DeleteApplication(getContext(), appID)
 		if err != nil {
 			ctx.WithError(err).Fatal("Could not unregister application")
 		}
